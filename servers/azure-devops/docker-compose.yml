@@ -1,0 +1,28 @@
+services:
+  azure-devops-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: azure-devops-mcp-server
+    ports:
+      - "8080:8080"
+    environment:
+      # API Key Authentication (optional)
+      - MCP_API_KEY=${MCP_API_KEY}
+      - MCP_REQUIRE_API_KEY=${MCP_REQUIRE_API_KEY:-false}
+      - HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

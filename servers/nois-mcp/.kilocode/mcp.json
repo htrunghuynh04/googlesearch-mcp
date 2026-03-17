@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "nois-mcp": {
+      "type": "streamable-http",
+      "url": "http://localhost:5001/mcp",
+      "disabled": false,
+      "alwaysAllow": []
+    }
+  }
+}

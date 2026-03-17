@@ -1,0 +1,63 @@
+# Source files
+src/
+tsconfig.json
+*.ts
+
+# Development files
+.env
+.env.*
+test-install/
+intelliplan/
+
+# Git files
+.git/
+.gitignore
+
+# Development docs
+TOOL_REGISTRATION.md
+Tools.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts (keep dist/ but exclude maps)
+*.map
+
+# Demo files
+*.gif
+*.mp4
+*.mov
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Test files
+*.test.js
+*.test.ts
+test/
+tests/
+__tests__/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Package tarballs
+*.tgz 

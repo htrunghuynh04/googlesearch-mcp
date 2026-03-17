@@ -1,0 +1,10 @@
+{
+  "configurations": [
+    {
+      "name": "Debug",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/Web/Web.csproj",
+    }
+  ]
+}

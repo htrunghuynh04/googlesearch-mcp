@@ -1,0 +1,73 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - AZURE_DEVOPS_ORG_URL
+      - AZURE_DEVOPS_PROJECT
+    properties:
+      AZURE_DEVOPS_ORG_URL:
+        type: string
+        default: https://dev.azure.com/your-organization
+        description: URL of your Azure DevOps organization or on-premises server
+      AZURE_DEVOPS_PROJECT:
+        type: string
+        description: Default Azure DevOps project to use
+      AZURE_DEVOPS_PERSONAL_ACCESS_TOKEN:
+        type: string
+        description: Your personal access token for Azure DevOps (required for PAT authentication)
+      AZURE_DEVOPS_IS_ON_PREMISES:
+        type: string
+        enum: ['true', 'false']
+        description: Whether this is an on-premises Azure DevOps Server installation
+      AZURE_DEVOPS_COLLECTION:
+        type: string
+        description: Collection name for on-premises Azure DevOps Server
+      AZURE_DEVOPS_API_VERSION:
+        type: string
+        description: API version for on-premises Azure DevOps Server
+      AZURE_DEVOPS_AUTH_TYPE:
+        type: string
+        enum: ['pat', 'ntlm', 'basic']
+        default: pat
+        description: Authentication type to use (pat, ntlm, or basic)
+      AZURE_DEVOPS_USERNAME:
+        type: string
+        description: Username for NTLM or Basic authentication
+      AZURE_DEVOPS_PASSWORD:
+        type: string
+        description: Password for NTLM or Basic authentication
+      AZURE_DEVOPS_DOMAIN:
+        type: string
+        description: Domain for NTLM authentication
+      ALLOWED_TOOLS:
+        type: string
+        description: Optional comma-separated list of tool methods to enable (e.g., 'listWorkItems,getWorkItemById'). If not specified, all tools will be available.
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'npm',
+      args: ['run', 'start'],
+      env: {
+        AZURE_DEVOPS_ORG_URL: config.AZURE_DEVOPS_ORG_URL,
+        AZURE_DEVOPS_PROJECT: config.AZURE_DEVOPS_PROJECT,
+        AZURE_DEVOPS_PERSONAL_ACCESS_TOKEN: config.AZURE_DEVOPS_PERSONAL_ACCESS_TOKEN,
+        AZURE_DEVOPS_IS_ON_PREMISES: config.AZURE_DEVOPS_IS_ON_PREMISES,
+        AZURE_DEVOPS_COLLECTION: config.AZURE_DEVOPS_COLLECTION,
+        AZURE_DEVOPS_API_VERSION: config.AZURE_DEVOPS_API_VERSION,
+        AZURE_DEVOPS_AUTH_TYPE: config.AZURE_DEVOPS_AUTH_TYPE,
+        AZURE_DEVOPS_USERNAME: config.AZURE_DEVOPS_USERNAME,
+        AZURE_DEVOPS_PASSWORD: config.AZURE_DEVOPS_PASSWORD,
+        AZURE_DEVOPS_DOMAIN: config.AZURE_DEVOPS_DOMAIN,
+        ALLOWED_TOOLS: config.ALLOWED_TOOLS
+      }
+    })
+  exampleConfig:
+    AZURE_DEVOPS_ORG_URL: https://dev.azure.com/dummy-org
+    AZURE_DEVOPS_PROJECT: DummyProject
+    AZURE_DEVOPS_PERSONAL_ACCESS_TOKEN: dummy-token-123456
+    AZURE_DEVOPS_IS_ON_PREMISES: "false"
