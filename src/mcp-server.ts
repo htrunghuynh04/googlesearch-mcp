@@ -10,59 +10,59 @@ import * as fs from "fs";
 import logger from "./logger.js";
 import { chromium, Browser } from "playwright";
 
-// 全局浏览器实例
+// Global browser instance
 let globalBrowser: Browser | undefined = undefined;
 
-// 创建MCP服务器实例
+// Create MCP server instance
 const server = new McpServer({
   name: "google-search-server",
   version: "1.0.0",
 });
 
-// 注册Google搜索工具
+// Register Google search tool
 server.tool(
   "google-search",
-  "使用Google搜索引擎查询实时网络信息，返回包含标题、链接和摘要的搜索结果。适用于需要获取最新信息、查找特定主题资料、研究当前事件或验证事实的场景。结果以JSON格式返回，包含查询内容和匹配结果列表。",
+  "Use Google search engine to query real-time web information. Returns search results including title, link and snippet. Suitable for getting latest information, finding specific topic materials, researching current events or verifying facts.",
   {
     query: z
       .string()
       .describe(
-        "搜索查询字符串。为获得最佳结果：1)优先使用英语关键词搜索，因为英语内容通常更丰富、更新更及时，特别是技术和学术领域；2)使用具体关键词而非模糊短语；3)可使用引号\"精确短语\"强制匹配；4)使用site:域名限定特定网站；5)使用-排除词过滤结果；6)使用OR连接备选词；7)优先使用专业术语；8)控制在2-5个关键词以获得平衡结果；9)根据目标内容选择合适的语言（如需要查找特定中文资源时再使用中文）。例如:'climate change report 2024 site:gov -opinion' 或 '\"machine learning algorithms\" tutorial (Python OR Julia)'"
+        "Search query string. For best results: 1) Use English keywords as they are typically more comprehensive and up-to-date, especially in technical and academic fields; 2) Use specific keywords rather than vague phrases; 3) Use quotes \"exact phrase\" for exact match; 4) Use site:domain to limit to specific websites; 5) Use -exclude to filter results; 6) Use OR to connect alternatives; 7) Prefer professional terminology; 8) Keep to 2-5 keywords for balanced results; 9) Choose appropriate language based on target content (e.g., Chinese when looking for specific Chinese resources). Example: 'climate change report 2024 site:gov -opinion' or '\"machine learning algorithms\" tutorial (Python OR Julia)'"
       ),
     limit: z
       .number()
       .optional()
-      .describe("返回的搜索结果数量 (默认: 10，建议范围: 1-20)"),
+      .describe("Number of search results to return (default: 10, recommended range: 1-20)"),
     timeout: z
       .number()
       .optional()
-      .describe("搜索操作的超时时间(毫秒) (默认: 30000，可根据网络状况调整)"),
+      .describe("Search operation timeout in milliseconds (default: 30000, can adjust based on network conditions)"),
   },
   async (params) => {
     try {
       const { query, limit, timeout } = params;
-      logger.info({ query }, "执行Google搜索");
+      logger.info({ query }, "Executing Google search");
 
-      // 获取用户主目录下的状态文件路径
+      // Get state file path from user home directory
       const stateFilePath = path.join(
         os.homedir(),
         ".google-search-browser-state.json"
       );
-      logger.info({ stateFilePath }, "使用状态文件路径");
+      logger.info({ stateFilePath }, "Using state file path");
 
-      // 检查状态文件是否存在
+      // Check if state file exists
       const stateFileExists = fs.existsSync(stateFilePath);
 
-      // 初始化警告消息
+      // Initialize warning message
       let warningMessage = "";
 
       if (!stateFileExists) {
         warningMessage =
-          "⚠️ 注意：浏览器状态文件不存在。首次使用时，如果遇到人机验证，系统会自动切换到有头模式让您完成验证。完成后，系统会保存状态文件，后续搜索将更加顺畅。";
+          "Warning: Browser state file does not exist. On first use, if you encounter CAPTCHA, the system will automatically switch to headed mode to let you complete verification. After completion, the state file will be saved for smoother future searches.";
         logger.warn(warningMessage);
       }
 
-      // 使用全局浏览器实例执行搜索
+      // Execute search using global browser instance
       const results = await googleSearch(
         query,
         {
@@ -73,7 +73,7 @@ server.tool(
         globalBrowser
       );
 
-      // 构建返回结果，包含警告信息
+      // Build response with warning message
       let responseText = JSON.stringify(results, null, 2);
       if (warningMessage) {
         responseText = warningMessage + "\n\n" + responseText;
@@ -88,71 +88,7 @@ server.tool(
         ],
       };
     } catch (error) {
-      logger.error({ error }, "搜索工具执行错误");
-
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: `搜索失败: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          },
-        ],
-      };
-    }
-  }
-);
-
-// 注册 web_search 工具 (SEO优化版本)
-server.tool(
-  "web_search",
-  "Search the web to retrieve relevant pages for a given query. Use this tool when performing SERP research or when real web information is required. Returns search results with rank position, title, URL, and snippet.",
-  {
-    query: z
-      .string()
-      .describe("The search query string. For best results: 1) Use specific keywords rather than vague phrases; 2) Use 2-5 keywords for balanced results; 3) Use English keywords for better coverage in technical/educational content."),
-    num_results: z
-      .number()
-      .optional()
-      .describe("Number of search results to return (default: 10, recommended range: 1-20)")
-  },
-  async (params) => {
-    try {
-      const { query, num_results = 10 } = params;
-      logger.info({ query, num_results }, "执行Web搜索 (SEO优化版)");
-
-      // 获取用户主目录下的状态文件路径
-      const stateFilePath = path.join(
-        os.homedir(),
-        ".google-search-browser-state.json"
-      );
-
-      // 执行搜索
-      const results = await googleSearch(
-        query,
-        {
-          limit: num_results,
-          timeout: 30000,
-          stateFile: stateFilePath,
-        },
-        globalBrowser
-      );
-
-      // 格式化为带排名的结果
-      const webResults = formatWebSearchResults(results.results, num_results);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(webResults, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      logger.error({ error }, "web_search工具执行错误");
+      logger.error({ error }, "Search tool execution error");
 
       return {
         isError: true,
@@ -169,7 +105,71 @@ server.tool(
   }
 );
 
-// 注册 fetch_webpage 工具
+// Register web_search tool (SEO optimized version)
+server.tool(
+  "web_search",
+  "Search the web to retrieve relevant pages for a given query. Use this tool when performing SERP research or when real web information is required. Returns search results with rank position, title, URL, and snippet.",
+  {
+    query: z
+      .string()
+      .describe("The search query string. For best results: 1) Use specific keywords rather than vague phrases; 2) Use 2-5 keywords for balanced results; 3) Use English keywords for better coverage in technical/educational content."),
+    num_results: z
+      .number()
+      .optional()
+      .describe("Number of search results to return (default: 10, recommended range: 1-20)")
+  },
+  async (params) => {
+    try {
+      const { query, num_results = 10 } = params;
+      logger.info({ query, num_results }, "Executing web search (SEO optimized)");
+
+      // Get state file path from user home directory
+      const stateFilePath = path.join(
+        os.homedir(),
+        ".google-search-browser-state.json"
+      );
+
+      // Execute search
+      const results = await googleSearch(
+        query,
+        {
+          limit: num_results,
+          timeout: 30000,
+          stateFile: stateFilePath,
+        },
+        globalBrowser
+      );
+
+      // Format results with ranking
+      const webResults = formatWebSearchResults(results.results, num_results);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(webResults, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      logger.error({ error }, "web_search tool execution error");
+
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Search failed: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+// Register fetch_webpage tool
 server.tool(
   "fetch_webpage",
   "Retrieve the content and headings of a webpage. Use this tool after identifying relevant URLs from web search results. Returns page title, structured headings (H1, H2, H3), and cleaned content text.",
@@ -181,9 +181,9 @@ server.tool(
   async (params) => {
     try {
       const { url } = params;
-      logger.info({ url }, "正在获取网页内容...");
+      logger.info({ url }, "Fetching webpage content...");
 
-      // 获取网页内容
+      // Fetch webpage content
       const pageContent = await fetchWebpage(url, globalBrowser);
 
       return {
@@ -195,7 +195,7 @@ server.tool(
         ],
       };
     } catch (error) {
-      logger.error({ error }, "fetch_webpage工具执行错误");
+      logger.error({ error }, "fetch_webpage tool execution error");
 
       return {
         isError: true,
@@ -213,13 +213,13 @@ server.tool(
   }
 );
 
-// 启动服务器
+// Start server
 async function main() {
   try {
-    logger.info("正在启动Google搜索MCP服务器...");
+    logger.info("Starting Google Search MCP server...");
 
-    // 初始化全局浏览器实例
-    logger.info("正在初始化全局浏览器实例...");
+    // Initialize global browser instance
+    logger.info("Initializing global browser instance...");
     globalBrowser = await chromium.launch({
       headless: true,
       args: [
@@ -251,35 +251,35 @@ async function main() {
       ],
       ignoreDefaultArgs: ["--enable-automation"],
     });
-    logger.info("全局浏览器实例初始化成功");
+    logger.info("Global browser instance initialized successfully");
 
     const transport = new StdioServerTransport();
     await server.connect(transport);
 
-    logger.info("Google搜索MCP服务器已启动，等待连接...");
+    logger.info("Google Search MCP server started, waiting for connections...");
 
-    // 设置进程退出时的清理函数
+    // Set up cleanup on process exit
     process.on("exit", async () => {
       await cleanupBrowser();
     });
 
-    // 处理Ctrl+C (Windows和Unix/Linux)
+    // Handle Ctrl+C (Windows and Unix/Linux)
     process.on("SIGINT", async () => {
-      logger.info("收到SIGINT信号，正在关闭服务器...");
+      logger.info("Received SIGINT, shutting down server...");
       await cleanupBrowser();
       process.exit(0);
     });
 
-    // 处理进程终止 (Unix/Linux)
+    // Handle process termination (Unix/Linux)
     process.on("SIGTERM", async () => {
-      logger.info("收到SIGTERM信号，正在关闭服务器...");
+      logger.info("Received SIGTERM, shutting down server...");
       await cleanupBrowser();
       process.exit(0);
     });
 
-    // Windows特定处理
+    // Windows specific handling
     if (process.platform === "win32") {
-      // 处理Windows的CTRL_CLOSE_EVENT、CTRL_LOGOFF_EVENT和CTRL_SHUTDOWN_EVENT
+      // Handle Windows CTRL_CLOSE_EVENT, CTRL_LOGOFF_EVENT and CTRL_SHUTDOWN_EVENT
       const readline = await import("readline");
       const rl = readline.createInterface({
         input: process.stdin,
@@ -287,28 +287,28 @@ async function main() {
       });
 
       rl.on("SIGINT", async () => {
-        logger.info("Windows: 收到SIGINT信号，正在关闭服务器...");
+        logger.info("Windows: Received SIGINT, shutting down server...");
         await cleanupBrowser();
         process.exit(0);
       });
     }
   } catch (error) {
-    logger.error({ error }, "服务器启动失败");
+    logger.error({ error }, "Server startup failed");
     await cleanupBrowser();
     process.exit(1);
   }
 }
 
-// 清理浏览器资源
+// Cleanup browser resources
 async function cleanupBrowser() {
   if (globalBrowser) {
-    logger.info("正在关闭全局浏览器实例...");
+    logger.info("Closing global browser instance...");
     try {
       await globalBrowser.close();
       globalBrowser = undefined;
-      logger.info("全局浏览器实例已关闭");
+      logger.info("Global browser instance closed");
     } catch (error) {
-      logger.error({ error }, "关闭浏览器实例时发生错误");
+      logger.error({ error }, "Error closing browser instance");
     }
   }
 }
