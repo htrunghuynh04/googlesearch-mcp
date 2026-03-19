@@ -219,8 +219,8 @@ server.tool(
 async function main() {
   try {
     // Determine transport mode from environment
-    const transportMode = process.env.MCP_TRANSPORT || "stdio";
-    const port = parseInt(process.env.MCP_PORT || "8080", 10);
+    const transportMode = process.env.MCP_TRANSPORT || "sse";
+    const port = parseInt(process.env.PORT || process.env.MCP_PORT || "8080", 10);
     const host = process.env.MCP_HOST || "0.0.0.0";
 
     logger.info({ transportMode, port, host }, "Starting Google Search MCP server...");
