@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "基于 Playwright 的 Google 搜索 CLI 工具",
   "type": "module",
-  "main": "dist/src/index.js",
+  "main": "dist/src/mcp-server.js",
   "types": "dist//src/index.d.ts",
   "bin": {
     "google-search": "./bin/google-search",
