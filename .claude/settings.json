@@ -1,0 +1,8 @@
+{
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "Bash(C:\\Users\\ASUS\\AppData\\Local\\Python\\bin\\python.exe:*)"
+    ]
+  }
+}

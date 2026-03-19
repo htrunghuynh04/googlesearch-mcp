@@ -2,6 +2,8 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import http from "http";
 import { z } from "zod";
 import { googleSearch, getGoogleSearchPageHtml, fetchWebpage, formatWebSearchResults } from "./search.js";
 import * as os from "os";
@@ -216,7 +218,12 @@ server.tool(
 // Start server
 async function main() {
   try {
-    logger.info("Starting Google Search MCP server...");
+    // Determine transport mode from environment
+    const transportMode = process.env.MCP_TRANSPORT || "stdio";
+    const port = parseInt(process.env.MCP_PORT || "3000", 10);
+    const host = process.env.MCP_HOST || "0.0.0.0";
+
+    logger.info({ transportMode, port, host }, "Starting Google Search MCP server...");
 
     // Initialize global browser instance
     logger.info("Initializing global browser instance...");
@@ -253,10 +260,32 @@ async function main() {
     });
     logger.info("Global browser instance initialized successfully");
 
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
+    if (transportMode === "sse") {
+      // HTTP/SSE transport for cloud deployment using StreamableHTTP
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => crypto.randomUUID(),
+      });
 
-    logger.info("Google Search MCP server started, waiting for connections...");
+      await server.connect(transport);
+
+      const httpServer = http.createServer(async (req, res) => {
+        if (req.url === "/mcp" || req.url?.startsWith("/mcp")) {
+          await transport.handleRequest(req, res);
+        } else {
+          res.writeHead(404);
+          res.end("Not Found");
+        }
+      });
+
+      httpServer.listen(port, host, () => {
+        logger.info(`Google Search MCP server started on ${host}:${port} with SSE transport`);
+      });
+    } else {
+      // Default stdio transport for local development
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+      logger.info("Google Search MCP server started with stdio transport");
+    }
 
     // Set up cleanup on process exit
     process.on("exit", async () => {

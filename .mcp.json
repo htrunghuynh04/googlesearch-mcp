@@ -1,0 +1,8 @@
+{
+  "google-search": {
+    "command": "node",
+    "args": [
+      "D:\\NOIS Internship\\google-search-main\\google-search-main\\servers\\google-search\\dist\\src\\mcp-server.js"
+    ]
+  }
+}

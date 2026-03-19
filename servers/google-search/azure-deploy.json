@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Azure/azure-cli/main/src/azure-cli/azure/cli/command_modules/containerapp/_help.py",
+  "name": "google-search-mcp",
+  "type": "Microsoft.App/containerApps",
+  "location": "eastus",
+  "resourceGroup": "rg-google-search-mcp",
+  "properties": {
+    "managedEnvironmentId": "/subscriptions/{subscription}/resourceGroups/rg-google-search-mcp/providers/Microsoft.App/managedEnvironments/env-google-search-mcp",
+    "configuration": {
+      "ingress": {
+        "external": true,
+        "targetPort": 3000,
+        "transport": "auto"
+      },
+      "registries": [
+        {
+          "server": "{containerRegistry}.azurecr.io",
+          "username": "{username}",
+          "passwordSecretRef": "acr-password"
+        }
+      ]
+    },
+    "template": {
+      "containers": [
+        {
+          "name": "google-search-mcp",
+          "image": "{containerRegistry}.azurecr.io/google-search-mcp:latest",
+          "resources": {
+            "cpu": 1,
+            "memory": "2Gi"
+          },
+          "env": [
+            {
+              "name": "MCP_TRANSPORT",
+              "value": "sse"
+            },
+            {
+              "name": "MCP_PORT",
+              "value": "3000"
+            }
+          ]
+        }
+      ],
+      "scale": {
+        "minReplicas": 1,
+        "maxReplicas": 10,
+        "rules": [
+          {
+            "name": "http-scaling",
+            "http": {}
+          }
+        ]
+      }
+    }
+  }
+}
