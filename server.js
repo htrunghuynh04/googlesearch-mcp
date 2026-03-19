@@ -1,2 +1,2 @@
 // Azure App Service entry point
-import('./dist/src/mcp-server.js');
+import('./servers/google-search/dist/src/mcp-server.js');
