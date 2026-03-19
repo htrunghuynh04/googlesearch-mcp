@@ -1,5 +1,2 @@
-// Azure App Service entry point
-console.log('Starting MCP server...');
-import('./dist/src/mcp-server.js').catch(err => {
-  console.error('Failed to start MCP server:', err);
-});
+// Azure App Service entry point - quick start
+import('./dist/src/mcp-server.js');

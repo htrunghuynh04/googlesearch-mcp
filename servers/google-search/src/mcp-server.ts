@@ -5,15 +5,27 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
 import { z } from "zod";
-import { googleSearch, getGoogleSearchPageHtml, fetchWebpage, formatWebSearchResults } from "./search.js";
 import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
 import logger from "./logger.js";
-import { chromium, Browser } from "playwright";
+
+// Lazy load search module (contains playwright)
+let googleSearch: any, getGoogleSearchPageHtml: any, fetchWebpage: any, formatWebSearchResults: any;
+
+async function loadSearchModule() {
+  if (!googleSearch) {
+    const search = await import("./search.js");
+    googleSearch = search.googleSearch;
+    getGoogleSearchPageHtml = search.getGoogleSearchPageHtml;
+    fetchWebpage = search.fetchWebpage;
+    formatWebSearchResults = search.formatWebSearchResults;
+  }
+  return { googleSearch, getGoogleSearchPageHtml, fetchWebpage, formatWebSearchResults };
+}
 
 // Global browser instance
-let globalBrowser: Browser | undefined = undefined;
+let globalBrowser: any;
 
 // Create MCP server instance
 const server = new McpServer({
@@ -64,8 +76,11 @@ server.tool(
         logger.warn(warningMessage);
       }
 
+      // Load search module lazily
+      const search = await loadSearchModule();
+
       // Execute search using global browser instance
-      const results = await googleSearch(
+      const results = await search.googleSearch(
         query,
         {
           limit: limit,
@@ -131,8 +146,11 @@ server.tool(
         ".google-search-browser-state.json"
       );
 
+      // Load search module lazily
+      const search = await loadSearchModule();
+
       // Execute search
-      const results = await googleSearch(
+      const results = await search.googleSearch(
         query,
         {
           limit: num_results,
@@ -143,7 +161,7 @@ server.tool(
       );
 
       // Format results with ranking
-      const webResults = formatWebSearchResults(results.results, num_results);
+      const webResults = search.formatWebSearchResults(results.results, num_results);
 
       return {
         content: [
@@ -185,8 +203,11 @@ server.tool(
       const { url } = params;
       logger.info({ url }, "Fetching webpage content...");
 
+      // Load search module lazily
+      const search = await loadSearchModule();
+
       // Fetch webpage content
-      const pageContent = await fetchWebpage(url, globalBrowser);
+      const pageContent = await search.fetchWebpage(url, globalBrowser);
 
       return {
         content: [
