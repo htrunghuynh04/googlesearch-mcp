@@ -225,40 +225,8 @@ async function main() {
 
     logger.info({ transportMode, port, host }, "Starting Google Search MCP server...");
 
-    // Initialize global browser instance
-    logger.info("Initializing global browser instance...");
-    globalBrowser = await chromium.launch({
-      headless: true,
-      args: [
-        "--disable-blink-features=AutomationControlled",
-        "--disable-features=IsolateOrigins,site-per-process",
-        "--disable-site-isolation-trials",
-        "--disable-web-security",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        "--mute-audio",
-        "--disable-background-networking",
-        "--disable-background-timer-throttling",
-        "--disable-backgrounding-occluded-windows",
-        "--disable-breakpad",
-        "--disable-component-extensions-with-background-pages",
-        "--disable-extensions",
-        "--disable-features=TranslateUI",
-        "--disable-ipc-flooding-protection",
-        "--disable-renderer-backgrounding",
-        "--enable-features=NetworkService,NetworkServiceInProcess",
-        "--force-color-profile=srgb",
-        "--metrics-recording-only",
-      ],
-      ignoreDefaultArgs: ["--enable-automation"],
-    });
-    logger.info("Global browser instance initialized successfully");
+    // Initialize global browser instance lazily (only when needed)
+    logger.info("Browser will be initialized on first request...");
 
     if (transportMode === "sse") {
       // HTTP/SSE transport for cloud deployment using StreamableHTTP
