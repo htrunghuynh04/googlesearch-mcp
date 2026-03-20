@@ -284,22 +284,6 @@ async function main() {
             return;
           }
 
-          // Validate Accept header - return proper HTTP 406 if missing
-          const acceptHeader = req.headers.accept || "";
-          if (!acceptHeader.includes("text/event-stream")) {
-            res.statusCode = 406;
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({
-              jsonrpc: "2.0",
-              error: {
-                code: -32000,
-                message: "Client must accept text/event-stream"
-              },
-              id: null
-            }));
-            return;
-          }
-
           await transport.handleRequest(req, res);
         });
 
