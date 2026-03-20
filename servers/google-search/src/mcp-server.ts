@@ -8,6 +8,7 @@ import { z } from "zod";
 import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
+import crypto from "crypto";
 import logger from "./logger.js";
 
 // Try to import express, fall back to http if not available
@@ -272,10 +273,10 @@ async function main() {
 
         // MCP endpoint - handle both JSON and SSE
         app.all("/mcp", async (req: any, res: any) => {
+          // Set CORS headers first
           res.setHeader("Access-Control-Allow-Origin", "*");
           res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
           res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization");
-          res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
 
           if (req.method === "OPTIONS") {
             res.writeHead(204);
@@ -283,15 +284,23 @@ async function main() {
             return;
           }
 
-          // Create new request object with forced Accept header
-          // This is needed because the transport validates Accept header early
-          const modifiedReq = req as any;
-          modifiedReq.headers = {
-            ...req.headers,
-            accept: "text/event-stream"
-          };
+          // Validate Accept header - return proper HTTP 406 if missing
+          const acceptHeader = req.headers.accept || "";
+          if (!acceptHeader.includes("text/event-stream")) {
+            res.statusCode = 406;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({
+              jsonrpc: "2.0",
+              error: {
+                code: -32000,
+                message: "Client must accept text/event-stream"
+              },
+              id: null
+            }));
+            return;
+          }
 
-          await transport.handleRequest(modifiedReq, res);
+          await transport.handleRequest(req, res);
         });
 
         app.get("/health", (req: any, res: any) => {
