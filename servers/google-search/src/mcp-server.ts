@@ -258,7 +258,22 @@ async function main() {
       await server.connect(transport);
 
       const httpServer = http.createServer(async (req, res) => {
+        // Set CORS headers
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+
+        if (req.method === "OPTIONS") {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+
         if (req.url === "/mcp" || req.url?.startsWith("/mcp")) {
+          // Force Accept header to text/event-stream for SSE
+          if (req.headers.accept && !req.headers.accept.includes("text/event-stream")) {
+            req.headers.accept = "text/event-stream";
+          }
           await transport.handleRequest(req, res);
         } else {
           res.writeHead(404);
