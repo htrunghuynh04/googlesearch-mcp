@@ -274,7 +274,8 @@ async function main() {
         app.all("/mcp", async (req: any, res: any) => {
           res.setHeader("Access-Control-Allow-Origin", "*");
           res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-          res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+          res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization");
+          res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
 
           if (req.method === "OPTIONS") {
             res.writeHead(204);
@@ -282,9 +283,15 @@ async function main() {
             return;
           }
 
-          // Force SSE for all MCP requests
-          req.headers.accept = "text/event-stream";
-          await transport.handleRequest(req, res);
+          // Create new request object with forced Accept header
+          // This is needed because the transport validates Accept header early
+          const modifiedReq = req as any;
+          modifiedReq.headers = {
+            ...req.headers,
+            accept: "text/event-stream"
+          };
+
+          await transport.handleRequest(modifiedReq, res);
         });
 
         app.get("/health", (req: any, res: any) => {
