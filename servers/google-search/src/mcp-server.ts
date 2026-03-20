@@ -10,6 +10,14 @@ import * as path from "path";
 import * as fs from "fs";
 import logger from "./logger.js";
 
+// Try to import express, fall back to http if not available
+let express: any;
+try {
+  express = require("express");
+} catch {
+  express = null;
+}
+
 // Lazy load search module (contains playwright)
 let googleSearch: any, getGoogleSearchPageHtml: any, fetchWebpage: any, formatWebSearchResults: any;
 
@@ -249,7 +257,7 @@ async function main() {
     // Initialize global browser instance lazily (only when needed)
     logger.info("Browser will be initialized on first request...");
 
-    if (transportMode === "sse") {
+    if (transportMode === "sse" || transportMode === "http") {
       // HTTP/SSE transport for cloud deployment using StreamableHTTP
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
@@ -257,33 +265,61 @@ async function main() {
 
       await server.connect(transport);
 
-      const httpServer = http.createServer(async (req, res) => {
-        // Set CORS headers
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+      // Use express if available, otherwise use http
+      if (express) {
+        const app = express();
+        app.use(express.json());
 
-        if (req.method === "OPTIONS") {
-          res.writeHead(204);
-          res.end();
-          return;
-        }
+        // MCP endpoint - handle both JSON and SSE
+        app.all("/mcp", async (req: any, res: any) => {
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+          res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
 
-        if (req.url === "/mcp" || req.url?.startsWith("/mcp")) {
-          // Force Accept header to text/event-stream for SSE
-          if (req.headers.accept && !req.headers.accept.includes("text/event-stream")) {
-            req.headers.accept = "text/event-stream";
+          if (req.method === "OPTIONS") {
+            res.writeHead(204);
+            res.end();
+            return;
           }
-          await transport.handleRequest(req, res);
-        } else {
-          res.writeHead(404);
-          res.end("Not Found");
-        }
-      });
 
-      httpServer.listen(port, host, () => {
-        logger.info(`Google Search MCP server started on ${host}:${port} with SSE transport`);
-      });
+          // Force SSE for all MCP requests
+          req.headers.accept = "text/event-stream";
+          await transport.handleRequest(req, res);
+        });
+
+        app.get("/health", (req: any, res: any) => {
+          res.json({ status: "ok" });
+        });
+
+        app.listen(port, host, () => {
+          logger.info(`Google Search MCP server started on ${host}:${port} with Express + SSE transport`);
+        });
+      } else {
+        // Fallback to http server
+        const httpServer = http.createServer(async (req, res) => {
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+          res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept");
+
+          if (req.method === "OPTIONS") {
+            res.writeHead(204);
+            res.end();
+            return;
+          }
+
+          if (req.url === "/mcp" || req.url?.startsWith("/mcp")) {
+            req.headers.accept = "text/event-stream";
+            await transport.handleRequest(req, res);
+          } else {
+            res.writeHead(404);
+            res.end("Not Found");
+          }
+        });
+
+        httpServer.listen(port, host, () => {
+          logger.info(`Google Search MCP server started on ${host}:${port} with SSE transport`);
+        });
+      }
     } else {
       // Default stdio transport for local development
       const transport = new StdioServerTransport();
