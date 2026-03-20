@@ -36,14 +36,15 @@ async function loadSearchModule() {
 // Global browser instance
 let globalBrowser: any;
 
-// Create MCP server instance
-const server = new McpServer({
-  name: "google-search-server",
-  version: "1.0.0",
-});
+// Create and configure a new MCP server instance
+function createMcpServer(): McpServer {
+  const server = new McpServer({
+    name: "google-search-server",
+    version: "1.0.0",
+  });
 
-// Register Google search tool
-server.tool(
+  // Register Google search tool
+  server.tool(
   "google-search",
   "Use Google search engine to query real-time web information. Returns search results including title, link and snippet. Suitable for getting latest information, finding specific topic materials, researching current events or verifying facts.",
   {
@@ -131,8 +132,8 @@ server.tool(
   }
 );
 
-// Register web_search tool (SEO optimized version)
-server.tool(
+  // Register web_search tool (SEO optimized version)
+  server.tool(
   "web_search",
   "Search the web to retrieve relevant pages for a given query. Use this tool when performing SERP research or when real web information is required. Returns search results with rank position, title, URL, and snippet.",
   {
@@ -198,8 +199,8 @@ server.tool(
   }
 );
 
-// Register fetch_webpage tool
-server.tool(
+  // Register fetch_webpage tool
+  server.tool(
   "fetch_webpage",
   "Retrieve the content and headings of a webpage. Use this tool after identifying relevant URLs from web search results. Returns page title, structured headings (H1, H2, H3), and cleaned content text.",
   {
@@ -245,6 +246,9 @@ server.tool(
   }
 );
 
+  return server;
+}
+
 // Start server
 async function main() {
   try {
@@ -259,21 +263,13 @@ async function main() {
     logger.info("Browser will be initialized on first request...");
 
     if (transportMode === "sse" || transportMode === "http") {
-      // HTTP/SSE transport for cloud deployment using StreamableHTTP
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => crypto.randomUUID(),
-      });
-
-      await server.connect(transport);
-
       // Use express if available, otherwise use http
       if (express) {
         const app = express();
         app.use(express.json());
 
-        // MCP endpoint - handle both JSON and SSE
+        // MCP endpoint - create new server+transport per request (stateless)
         app.all("/mcp", async (req: any, res: any) => {
-          // Set CORS headers first
           res.setHeader("Access-Control-Allow-Origin", "*");
           res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
           res.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization");
@@ -284,6 +280,11 @@ async function main() {
             return;
           }
 
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: undefined,
+          });
+          const mcpServer = createMcpServer();
+          await mcpServer.connect(transport);
           await transport.handleRequest(req, res);
         });
 
@@ -292,7 +293,7 @@ async function main() {
         });
 
         app.listen(port, host, () => {
-          logger.info(`Google Search MCP server started on ${host}:${port} with Express + SSE transport`);
+          logger.info(`Google Search MCP server started on ${host}:${port} with StreamableHTTP transport`);
         });
       } else {
         // Fallback to http server
@@ -308,7 +309,11 @@ async function main() {
           }
 
           if (req.url === "/mcp" || req.url?.startsWith("/mcp")) {
-            req.headers.accept = "text/event-stream";
+            const transport = new StreamableHTTPServerTransport({
+              sessionIdGenerator: undefined,
+            });
+            const mcpServer = createMcpServer();
+            await mcpServer.connect(transport);
             await transport.handleRequest(req, res);
           } else {
             res.writeHead(404);
@@ -317,13 +322,14 @@ async function main() {
         });
 
         httpServer.listen(port, host, () => {
-          logger.info(`Google Search MCP server started on ${host}:${port} with SSE transport`);
+          logger.info(`Google Search MCP server started on ${host}:${port} with StreamableHTTP transport`);
         });
       }
     } else {
       // Default stdio transport for local development
       const transport = new StdioServerTransport();
-      await server.connect(transport);
+      const mcpServer = createMcpServer();
+      await mcpServer.connect(transport);
       logger.info("Google Search MCP server started with stdio transport");
     }
 
