@@ -397,7 +397,7 @@ export async function googleSearch(
       // Visit Google search page
       const response = await page.goto(selectedDomain, {
         timeout,
-        waitUntil: "networkidle",
+        waitUntil: "domcontentloaded",
       });
 
       // Check if redirected to CAPTCHA page
@@ -542,7 +542,7 @@ export async function googleSearch(
       logger.info("Waiting for page to load...");
 
       // Wait for page to load
-      await page.waitForLoadState("networkidle", { timeout });
+      await page.waitForLoadState("domcontentloaded", { timeout });
 
       // Check if URL after search redirected to CAPTCHA
       const searchUrl = page.url();
@@ -637,7 +637,7 @@ export async function googleSearch(
           logger.info("CAPTCHA completed, continuing search...");
 
           // Wait for page to reload
-          await page.waitForLoadState("networkidle", { timeout });
+          await page.waitForLoadState("domcontentloaded", { timeout });
         }
       }
 
@@ -1310,7 +1310,7 @@ export async function getGoogleSearchPageHtml(
       // Visit Google search page
       const response = await page.goto(selectedDomain, {
         timeout,
-        waitUntil: "networkidle",
+        waitUntil: "domcontentloaded",
       });
 
       // Check if redirected to CAPTCHA page
@@ -1396,7 +1396,7 @@ export async function getGoogleSearchPageHtml(
       logger.info("Waiting for search result page to load...");
 
       // Wait for page to load
-      await page.waitForLoadState("networkidle", { timeout });
+      await page.waitForLoadState("domcontentloaded", { timeout });
 
       // Check if URL after search redirected to CAPTCHA
       const searchUrl = page.url();
@@ -1430,7 +1430,7 @@ export async function getGoogleSearchPageHtml(
           logger.info("CAPTCHA completed, continuing search...");
 
           // Wait for page to reload
-          await page.waitForLoadState("networkidle", { timeout });
+          await page.waitForLoadState("domcontentloaded", { timeout });
         }
       }
 
@@ -1443,7 +1443,7 @@ export async function getGoogleSearchPageHtml(
       await page.waitForTimeout(1000); // Wait 1 second for page to stabilize
       
       // Wait again for network idle to ensure all async operations complete
-      await page.waitForLoadState("networkidle", { timeout });
+      await page.waitForLoadState("domcontentloaded", { timeout });
       
       // Get page HTML content
       const fullHtml = await page.content();
@@ -1775,7 +1775,7 @@ export async function fetchWebpage(
 
       // Try multiple wait strategies
       try {
-        await page.goto(url, { waitUntil: "networkidle", timeout: 15000 });
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
       } catch {
         // Fallback to domcontentloaded
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -1850,7 +1850,7 @@ export async function fetchWebpage(
 
     // Try multiple wait strategies
     try {
-      await page.goto(url, { waitUntil: "networkidle", timeout: 15000 });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
     } catch {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
     }
