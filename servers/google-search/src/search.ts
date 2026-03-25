@@ -7,6 +7,24 @@ import logger from "./logger.js";
 import { url } from "inspector";
 import { JSDOM } from "jsdom";
 
+// Get proxy config from PROXY_URL env var
+// Format: http://user:pass@host:port or socks5://user:pass@host:port
+function getProxyConfig(): { server: string; username?: string; password?: string } | undefined {
+  const proxyUrl = process.env.PROXY_URL;
+  if (!proxyUrl) return undefined;
+  try {
+    const parsed = new URL(proxyUrl);
+    return {
+      server: `${parsed.protocol}//${parsed.host}`,
+      username: parsed.username || undefined,
+      password: parsed.password || undefined,
+    };
+  } catch {
+    logger.warn({ proxyUrl }, "Invalid PROXY_URL format, ignoring proxy");
+    return undefined;
+  }
+}
+
 // Fingerprint configuration interface
 interface FingerprintConfig {
   deviceName: string;
@@ -223,6 +241,7 @@ export async function googleSearch(
       browser = await chromium.launch({
         headless,
         timeout: timeout * 2, // Increase browser startup timeout
+        proxy: getProxyConfig(),
         args: [
           "--disable-blink-features=AutomationControlled",
           "--disable-features=IsolateOrigins,site-per-process",
@@ -461,6 +480,7 @@ export async function googleSearch(
                 "--force-color-profile=srgb",
                 "--metrics-recording-only",
               ],
+              proxy: getProxyConfig(),
               ignoreDefaultArgs: ["--enable-automation"],
             });
 
@@ -597,6 +617,7 @@ export async function googleSearch(
                 "--force-color-profile=srgb",
                 "--metrics-recording-only",
               ],
+              proxy: getProxyConfig(),
               ignoreDefaultArgs: ["--enable-automation"],
             });
 
@@ -718,6 +739,7 @@ export async function googleSearch(
                   "--force-color-profile=srgb",
                   "--metrics-recording-only",
                 ],
+                proxy: getProxyConfig(),
                 ignoreDefaultArgs: ["--enable-automation"],
               });
 
@@ -1164,6 +1186,7 @@ export async function getGoogleSearchPageHtml(
         "--force-color-profile=srgb",
         "--metrics-recording-only",
       ],
+      proxy: getProxyConfig(),
       ignoreDefaultArgs: ["--enable-automation"],
     });
 
@@ -1747,6 +1770,7 @@ export async function fetchWebpage(
           "--disable-plugins",
           "--disable-popup-blocking",
         ],
+        proxy: getProxyConfig(),
       });
       shouldCloseBrowser = true;
 
