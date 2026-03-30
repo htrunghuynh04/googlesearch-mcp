@@ -60,7 +60,7 @@ function createMcpServer(): McpServer {
     timeout: z
       .number()
       .optional()
-      .describe("Search operation timeout in milliseconds (default: 30000, can adjust based on network conditions)"),
+      .describe("Search operation timeout in milliseconds (default: 90000, can adjust based on network conditions)"),
   },
   async (params) => {
     try {
@@ -164,7 +164,7 @@ function createMcpServer(): McpServer {
         query,
         {
           limit: num_results,
-          timeout: 30000,
+          timeout: 90000,
           stateFile: stateFilePath,
         },
         globalBrowser
