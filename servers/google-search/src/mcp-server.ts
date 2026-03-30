@@ -5,11 +5,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
 import { z } from "zod";
-import * as os from "os";
-import * as path from "path";
-import * as fs from "fs";
 import crypto from "crypto";
 import logger from "./logger.js";
+import { googleApiSearch } from "./google-api-search.js";
 
 // Try to import express, fall back to http if not available
 let express: any;
@@ -64,53 +62,16 @@ function createMcpServer(): McpServer {
   },
   async (params) => {
     try {
-      const { query, limit, timeout } = params;
+      const { query, limit } = params;
       logger.info({ query }, "Executing Google search");
 
-      // Get state file path from user home directory
-      const stateFilePath = path.join(
-        os.homedir(),
-        ".google-search-browser-state.json"
-      );
-      logger.info({ stateFilePath }, "Using state file path");
-
-      // Check if state file exists
-      const stateFileExists = fs.existsSync(stateFilePath);
-
-      // Initialize warning message
-      let warningMessage = "";
-
-      if (!stateFileExists) {
-        warningMessage =
-          "Warning: Browser state file does not exist. On first use, if you encounter CAPTCHA, the system will automatically switch to headed mode to let you complete verification. After completion, the state file will be saved for smoother future searches.";
-        logger.warn(warningMessage);
-      }
-
-      // Load search module lazily
-      const search = await loadSearchModule();
-
-      // Execute search using global browser instance
-      const results = await search.googleSearch(
-        query,
-        {
-          limit: limit,
-          timeout: timeout,
-          stateFile: stateFilePath,
-        },
-        globalBrowser
-      );
-
-      // Build response with warning message
-      let responseText = JSON.stringify(results, null, 2);
-      if (warningMessage) {
-        responseText = warningMessage + "\n\n" + responseText;
-      }
+      const results = await googleApiSearch(query, limit ?? 10);
 
       return {
         content: [
           {
             type: "text",
-            text: responseText,
+            text: JSON.stringify(results, null, 2),
           },
         ],
       };
@@ -150,28 +111,14 @@ function createMcpServer(): McpServer {
       const { query, num_results = 10 } = params;
       logger.info({ query, num_results }, "Executing web search (SEO optimized)");
 
-      // Get state file path from user home directory
-      const stateFilePath = path.join(
-        os.homedir(),
-        ".google-search-browser-state.json"
-      );
+      const results = await googleApiSearch(query, num_results);
 
-      // Load search module lazily
-      const search = await loadSearchModule();
-
-      // Execute search
-      const results = await search.googleSearch(
-        query,
-        {
-          limit: num_results,
-          timeout: 90000,
-          stateFile: stateFilePath,
-        },
-        globalBrowser
-      );
-
-      // Format results with ranking
-      const webResults = search.formatWebSearchResults(results.results, num_results);
+      const webResults = results.results.slice(0, num_results).map((r, i) => ({
+        rank: i + 1,
+        title: r.title,
+        url: r.link,
+        snippet: r.snippet,
+      }));
 
       return {
         content: [
