@@ -131,7 +131,7 @@ export async function googleSearch(
   // Set default options
   const {
     limit = 10,
-    timeout = 60000,
+    timeout = 90000,
     stateFile = "./browser-state.json",
     noSaveState = false,
     locale = "zh-CN", // Default to Chinese
@@ -1068,7 +1068,7 @@ export async function getGoogleSearchPageHtml(
 ): Promise<HtmlResponse> {
   // Set default options, consistent with googleSearch
   const {
-    timeout = 60000,
+    timeout = 90000,
     stateFile = "./browser-state.json",
     noSaveState = false,
     locale = "zh-CN", // Default to Chinese
