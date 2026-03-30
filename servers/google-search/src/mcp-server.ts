@@ -5,7 +5,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
 import { z } from "zod";
-import crypto from "crypto";
 import logger from "./logger.js";
 import { googleApiSearch } from "./google-api-search.js";
 
@@ -17,18 +16,15 @@ try {
   express = null;
 }
 
-// Lazy load search module (contains playwright)
-let googleSearch: any, getGoogleSearchPageHtml: any, fetchWebpage: any, formatWebSearchResults: any;
+// Lazy load search module (contains playwright) — only used by fetch_webpage
+let fetchWebpage: any;
 
 async function loadSearchModule() {
-  if (!googleSearch) {
+  if (!fetchWebpage) {
     const search = await import("./search.js");
-    googleSearch = search.googleSearch;
-    getGoogleSearchPageHtml = search.getGoogleSearchPageHtml;
     fetchWebpage = search.fetchWebpage;
-    formatWebSearchResults = search.formatWebSearchResults;
   }
-  return { googleSearch, getGoogleSearchPageHtml, fetchWebpage, formatWebSearchResults };
+  return { fetchWebpage };
 }
 
 // Global browser instance
@@ -55,10 +51,6 @@ function createMcpServer(): McpServer {
       .number()
       .optional()
       .describe("Number of search results to return (default: 10, recommended range: 1-20)"),
-    timeout: z
-      .number()
-      .optional()
-      .describe("Search operation timeout in milliseconds (default: 90000, can adjust based on network conditions)"),
   },
   async (params) => {
     try {
