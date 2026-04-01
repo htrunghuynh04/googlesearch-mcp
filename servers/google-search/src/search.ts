@@ -1726,6 +1726,43 @@ export async function fetchWebpage(
   let browserInstance = browser;
   let shouldCloseBrowser = false;
 
+  // --- Plain HTTP fetch (fast path for SSR pages, avoids bot detection) ---
+  try {
+    const randomUA = [
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    ][Math.floor(Math.random() * 3)];
+
+    const httpRes = await fetch(url, {
+      headers: {
+        "User-Agent": randomUA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (httpRes.ok) {
+      const html = await httpRes.text();
+      const headings = extractHeadings(html);
+      const hasHeadings = headings.H1.length + headings.H2.length + headings.H3.length > 0;
+
+      if (hasHeadings) {
+        const content = cleanHtmlContent(html);
+        const dom = new JSDOM(html);
+        const pageTitle = dom.window.document.title || "";
+        releaseLock();
+        logger.info({ url, titleLength: pageTitle.length, h1Count: headings.H1.length, h2Count: headings.H2.length, h3Count: headings.H3.length }, "Webpage content fetched via HTTP (fast path)");
+        return { page_title: pageTitle, url, headings, content };
+      }
+    }
+  } catch (httpErr) {
+    logger.warn({ url, err: String(httpErr) }, "HTTP fast path failed, falling back to browser");
+  }
+  // --- End plain HTTP fast path ---
+
   // List of user agents to rotate
   const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
