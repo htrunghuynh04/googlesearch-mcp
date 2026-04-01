@@ -1701,6 +1701,9 @@ function cleanHtmlContent(html: string): string {
   return text;
 }
 
+// Semaphore to limit concurrent Chromium instances to 1
+let fetchLock: Promise<void> = Promise.resolve();
+
 /**
  * Get webpage content and heading structure
  * @param url Webpage URL
@@ -1711,6 +1714,15 @@ export async function fetchWebpage(
   url: string,
   browser?: Browser
 ): Promise<WebPageContent> {
+  // Queue: wait for any in-progress fetch to finish before starting
+  const waitFor = fetchLock;
+  let releaseLock!: () => void;
+  fetchLock = new Promise<void>(resolve => { releaseLock = resolve; });
+
+  logger.info({ url }, "Waiting for fetch lock...");
+  await waitFor;
+  logger.info({ url }, "Fetch lock acquired");
+
   let browserInstance = browser;
   let shouldCloseBrowser = false;
 
@@ -1919,6 +1931,7 @@ export async function fetchWebpage(
     if (shouldCloseBrowser && browserInstance) {
       await browserInstance.close();
     }
+    releaseLock();
   }
 }
 
