@@ -1629,29 +1629,29 @@ export function extractHeadings(html: string): HeadingStructure {
     H3: []
   };
 
-  // Extract H1 tags
-  const h1Regex = /<h1[^>]*>([^<]*)<\/h1>/gi;
+  // Extract H1 tags ([\s\S]*? captures inner HTML including nested tags like <span>, <a>)
+  const h1Regex = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
   let match;
   while ((match = h1Regex.exec(html)) !== null) {
-    const text = match[1].replace(/<[^>]+>/g, '').trim();
+    const text = match[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     if (text && !headings.H1.includes(text)) {
       headings.H1.push(text);
     }
   }
 
   // Extract H2 tags
-  const h2Regex = /<h2[^>]*>([^<]*)<\/h2>/gi;
+  const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
   while ((match = h2Regex.exec(html)) !== null) {
-    const text = match[1].replace(/<[^>]+>/g, '').trim();
+    const text = match[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     if (text && !headings.H2.includes(text)) {
       headings.H2.push(text);
     }
   }
 
   // Extract H3 tags
-  const h3Regex = /<h3[^>]*>([^<]*)<\/h3>/gi;
+  const h3Regex = /<h3[^>]*>([\s\S]*?)<\/h3>/gi;
   while ((match = h3Regex.exec(html)) !== null) {
-    const text = match[1].replace(/<[^>]+>/g, '').trim();
+    const text = match[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
     if (text && !headings.H3.includes(text)) {
       headings.H3.push(text);
     }
@@ -1850,7 +1850,7 @@ export async function fetchWebpage(
       // Close page
       await page.close();
 
-      logger.info({ url, titleLength: pageTitle.length, headingCount: headings.H1.length + headings.H2.length + headings.H3.length }, "Webpage content fetched successfully");
+      logger.info({ url, titleLength: pageTitle.length, h1Count: headings.H1.length, h2Count: headings.H2.length, h3Count: headings.H3.length }, "Webpage content fetched successfully");
 
       return {
         page_title: pageTitle,
@@ -1909,7 +1909,7 @@ export async function fetchWebpage(
     // Close page
     await page.close();
 
-    logger.info({ url, titleLength: pageTitle.length, headingCount: headings.H1.length + headings.H2.length + headings.H3.length }, "Webpage content fetched successfully");
+    logger.info({ url, titleLength: pageTitle.length, h1Count: headings.H1.length, h2Count: headings.H2.length, h3Count: headings.H3.length }, "Webpage content fetched successfully");
 
     return {
       page_title: pageTitle,
