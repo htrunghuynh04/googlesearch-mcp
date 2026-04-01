@@ -1811,7 +1811,7 @@ export async function fetchWebpage(
 
       // Try multiple wait strategies
       try {
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await page.goto(url, { waitUntil: "load", timeout: 30000 });
       } catch {
         // Fallback to domcontentloaded
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
@@ -1838,11 +1838,21 @@ export async function fetchWebpage(
         logger.warn({ url, blockMessages }, "Website may be blocking requests");
       }
 
+      // Extract headings from live DOM (more reliable for JS-rendered pages)
+      const headings = await page.evaluate(() => {
+        const result: { H1: string[]; H2: string[]; H3: string[] } = { H1: [], H2: [], H3: [] };
+        (['h1', 'h2', 'h3'] as const).forEach((tag, i) => {
+          const key = (['H1', 'H2', 'H3'] as const)[i];
+          document.querySelectorAll(tag).forEach(el => {
+            const text = el.textContent?.replace(/\s+/g, ' ').trim() || '';
+            if (text && !result[key].includes(text)) result[key].push(text);
+          });
+        });
+        return result;
+      });
+
       // Get HTML content
       const html = await page.content();
-
-      // Extract headings
-      const headings = extractHeadings(html);
 
       // Clean and get text content
       const content = cleanHtmlContent(html);
@@ -1886,7 +1896,7 @@ export async function fetchWebpage(
 
     // Try multiple wait strategies
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.goto(url, { waitUntil: "load", timeout: 30000 });
     } catch {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
     }
@@ -1897,11 +1907,21 @@ export async function fetchWebpage(
     // Get page title
     const pageTitle = await page.title();
 
+    // Extract headings from live DOM (more reliable for JS-rendered pages)
+    const headings = await page.evaluate(() => {
+      const result: { H1: string[]; H2: string[]; H3: string[] } = { H1: [], H2: [], H3: [] };
+      (['h1', 'h2', 'h3'] as const).forEach((tag, i) => {
+        const key = (['H1', 'H2', 'H3'] as const)[i];
+        document.querySelectorAll(tag).forEach(el => {
+          const text = el.textContent?.replace(/\s+/g, ' ').trim() || '';
+          if (text && !result[key].includes(text)) result[key].push(text);
+        });
+      });
+      return result;
+    });
+
     // Get HTML content
     const html = await page.content();
-
-    // Extract headings
-    const headings = extractHeadings(html);
 
     // Clean and get text content
     const content = cleanHtmlContent(html);
